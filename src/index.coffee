@@ -12,10 +12,11 @@ State = Record
 
 
 append = (action, [x,y])->(buffer)->
-  return buffer if x is 0 and y is 0
+  return buffer if x is 0 and y is 0 and action isnt "pop"
   space = (if buffer then " " else "")
   op = switch action
     when "draw" then "l"
+    when "pop" then "M"
     when "move", "turn" then "m"
     else false
   if op then buffer+space+op+" "+x+" "+y else buffer
@@ -24,8 +25,6 @@ updateTop = (prop, update)->(state) ->
   state.update "stack", (stack)->
     stack.pop().push stack.peek().update prop, update
 
-push = (stack)->stack.push stack.peek()
-pop = (stack)->stack.pop()
 v_add = ([x1,y1])->([x0,y0])->[x0+x1,y0+y1]
 s_add = (b)->(a)->a+b
 
@@ -58,7 +57,7 @@ ite = (cond0, thenBranch, elseBranch=identity)->(state)->
 
 
 flush = (state,{accumulator, action})->
-  console.log "flush", state
+  return state if accumulator[0] is 0 and accumulator[1] is 0
   wrap state
     .bind set "accumulator", [0,0]
     .bind update "buffer", append action, accumulator
@@ -91,7 +90,19 @@ draw = (state)->
     .bind set "action", "draw"
     .unwrap
 
+push = (state, {stack,accumulator},{position})->
+  # create a copy of the current frame.
+  state.update "stack", (stack)->
+    stack.push stack.peek()
 
+pop = (state,{stack})->
+  wrap state
+    .bind ite drawing, flush
+    .bind update "stack", (stack)->stack.pop()
+    .bind update "buffer", append "pop", stack.pop().peek().position
+    .bind set "action", "pop"
+    .bind set "accumulator", [0,0]
+    .unwrap
 
 transforms =
   'F': draw
@@ -101,7 +112,7 @@ transforms =
   '[': push
   ']': pop
 
-reducer = (chain, opc)->chain.bind transform[opc]
+reducer = (chain, opc)->chain.bind transforms[opc]
 next = (f)->()->
   new Turtle wrap(this.state).bind(f).unwrap
 module.exports = class Turtle
