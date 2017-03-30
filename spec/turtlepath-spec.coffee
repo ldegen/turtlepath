@@ -10,7 +10,7 @@ describe "The stateful turtle", ->
       .right()
       .draw()
       .path()
-    expect(path).to.eql "l 0 -1 l 1 -#{e}"
+    expect(path).to.eql "M 0 0 l 0 -1 l 1 -#{e}"
 
   it "moves, if told to, without drawing", ->
     t = new Turtle()
@@ -25,8 +25,8 @@ describe "The stateful turtle", ->
       .move()
       .left()
       .draw()
-    expect(t.path()).to.eql "m 1 -1 l 0 -1"
-    expect(t2.path()).to.eql "m 1 -1 l 0 -1 m -2 #{-f} l #{-f} 1"
+    expect(t.path()).to.eql "M 0 0 m 1 -1 l 0 -1"
+    expect(t2.path()).to.eql "M 0 0 m 1 -1 l 0 -1 m -2 #{-f} l #{-f} 1"
 
   it "can use a LIFO to store and restore states", ->
     t = new Turtle()
@@ -40,10 +40,14 @@ describe "The stateful turtle", ->
       .pop()
       .right()
       .draw()
-    expect(t.path()).to.eql "l 0 -2 M 0 -1 l -1 #{-e} M 0 -1 l 1 #{-e}"
+    expect(t.path()).to.eql "M 0 0 l 0 -2 M 0 -1 l -1 #{-e} M 0 -1 l 1 #{-e}"
 
 describe "The simple turtle", ->
   it "just follows a path described by a string", ->
     path = new Turtle().path "[fF]"
     #path = new Turtle().path "[fF][+fF][-fF]--fF"
-    expect(path).to.eql "m 0 -1 l 0 -1 M 0 0"
+    expect(path).to.eql "M 0 0 m 0 -1 l 0 -1 M 0 0"
+
+  it "handles nested push/pop calls", ->
+    path = new Turtle().path "F[-F[+F][-F]]"
+    expect(path).to.eql "M 0 0 l 0 -1 l -1 #{-e} l 0 -1 M -1 -1 l #{-f} 1 M -1 -1 M 0 -1"

@@ -61,7 +61,6 @@ flush = (state,{accumulator, action})->
   wrap state
     .bind set "accumulator", [0,0]
     .bind update "buffer", append action, accumulator
-    .bind updateTop "position", v_add accumulator
     .unwrap
     
 
@@ -90,12 +89,14 @@ draw = (state)->
     .bind set "action", "draw"
     .unwrap
 
-push = (state, {stack,accumulator},{position})->
+push = (state, {stack})->
   # create a copy of the current frame.
+  #console.log "push", stack.peek()
   state.update "stack", (stack)->
     stack.push stack.peek()
 
 pop = (state,{stack})->
+  #console.log "pop", stack.pop().peek()
   wrap state
     .bind ite drawing, flush
     .bind update "stack", (stack)->stack.pop()
@@ -112,20 +113,30 @@ transforms =
   '[': push
   ']': pop
 
-reducer = (chain, opc)->chain.bind transforms[opc]
-next = (f)->()->
+reducer = (chain, opc)->
+  {position, heading} =  chain.unwrap.stack.peek()
+  {action, accumulator} = chain.unwrap
+  #console.log "red pos: (%s), heading: %s, action: %s, accu: (%s), next: %s", position, heading, action, accumulator, opc
+  chain.bind (transforms[opc] ? identity)
+next = (f0)->(args...)->
+  f = if args.length > 0 then f0 args... else f0
   new Turtle wrap(this.state).bind(f).unwrap
+
+
 module.exports = class Turtle
-  constructor: (@state= new State)->
+  constructor: (@state= new State)-> 
   draw: next draw
   push: next push
   pop: next pop
   left: next turn -1
   right: next turn 1
   move: next move
+  distance: next (d)-> updateTop "distance", ->d
+  turnAngle: next (a)-> updateTop "turnAngle", ->a
   path: (s="")->
-    [s...]
+    p=[s...]
       .reduce reducer, wrap @state
       .bind flush
       .unwrap
       .buffer
+    "M 0 0 #{p}"
