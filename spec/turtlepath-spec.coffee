@@ -44,10 +44,26 @@ describe "The stateful turtle", ->
 
 describe "The simple turtle", ->
   it "just follows a path described by a string", ->
-    path = new Turtle().path "[fF]"
+    path = new Turtle()
+      .exec "[fF]"
+      .path()
     #path = new Turtle().path "[fF][+fF][-fF]--fF"
     expect(path).to.eql "M 0 0 m 0 -1 l 0 -1 M 0 0"
 
   it "handles nested push/pop calls", ->
-    path = new Turtle().path "F[-F[+F][-F]]"
+    path = new Turtle()
+      .exec "F[-F[+F][-F]]"
+      .path()
     expect(path).to.eql "M 0 0 l 0 -1 l -1 #{-e} l 0 -1 M -1 -1 l #{-f} 1 M -1 -1 M 0 -1"
+
+  it "can produce a list of vertices instead of a path", ->
+    points = new Turtle()
+      .exec "fFF++F-F"
+      .points()
+    expect(points).to.eql [
+      [0,-1]
+      [0,-2]
+      [0,-3]
+      [f,-2]
+      [1.0000000000000002,-2]
+    ]

@@ -1,4 +1,4 @@
-{Record, Stack}=require "immutable"
+{Record, Stack, List}=require "immutable"
 StackFrame = Record
   position: [0,0]
   heading: 0 #i.e. up
@@ -7,6 +7,7 @@ StackFrame = Record
 State = Record
   stack: Stack().push new StackFrame
   accumulator: [0,0]
+  vertices: List()
   action: "start"
   buffer: ""
 
@@ -46,6 +47,10 @@ c_eq = (prop, c )->(state)->c == state[prop]
 c_neq = (prop, c )->(state)->c != state[prop]
 drawing = c_eq "action", "draw"
 not_drawing = c_neq "action", "draw"
+vertex_new = ({stack, vertices})->
+  {position} = stack.peek()
+  last = vertices.last()
+  (not last?) or position[0] isnt last[0] or position[1] isnt last[1]
 
 set = (prop, val)->(state)->state.set prop, val
 update = (prop, f)->(state)->state.update prop, f
@@ -80,10 +85,12 @@ move = (state)->
     .bind set "action", "move"
     .unwrap
 
-draw = (state)->
+draw = (state, _,{position})->
   addDelta = v_add delta state
   wrap state
     .bind ite not_drawing, flush
+    .bind ite vertex_new, update "vertices", (vertices)->vertices.push position
+    .bind update "vertices", (vertices)->vertices.push addDelta position
     .bind update "accumulator", addDelta
     .bind updateTop "position", addDelta
     .bind set "action", "draw"
@@ -115,13 +122,17 @@ transforms =
 
 reducer = (chain, opc)->
   {position, heading} =  chain.unwrap.stack.peek()
-  {action, accumulator} = chain.unwrap
-  #console.log "red pos: (%s), heading: %s, action: %s, accu: (%s), next: %s", position, heading, action, accumulator, opc
+  {action, accumulator,vertices} = chain.unwrap
+  #console.log "red pos: (%s), heading: %s, action: %s, accu: (%s), vs: (%s), next: %s", position, heading, action, accumulator, vertices, opc
   chain.bind (transforms[opc] ? identity)
 next = (f0)->(args...)->
   f = if args.length > 0 then f0 args... else f0
   new Turtle wrap(this.state).bind(f).unwrap
 
+execute = (s)->(state)->
+  [s...]
+    .reduce reducer, wrap state
+    .unwrap
 
 module.exports = class Turtle
   constructor: (@state= new State)-> 
@@ -133,9 +144,10 @@ module.exports = class Turtle
   move: next move
   distance: next (d)-> updateTop "distance", ->d
   turnAngle: next (a)-> updateTop "turnAngle", ->a
-  path: (s="")->
-    p=[s...]
-      .reduce reducer, wrap @state
+  exec: next execute
+  points: ()->@state.vertices.toJS()
+  path: ()->
+    p= wrap @state
       .bind flush
       .unwrap
       .buffer
