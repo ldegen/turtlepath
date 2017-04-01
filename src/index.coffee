@@ -4,10 +4,12 @@ StackFrame = Record
   heading: 0 #i.e. up
   turnAngle: Math.PI/2 # 90 Degrees
   distance: 1
+  vertex: null
 State = Record
   stack: Stack().push new StackFrame
   accumulator: [0,0]
   vertices: List()
+  edges: List()
   action: "start"
   buffer: ""
 
@@ -47,11 +49,7 @@ c_eq = (prop, c )->(state)->c == state[prop]
 c_neq = (prop, c )->(state)->c != state[prop]
 drawing = c_eq "action", "draw"
 not_drawing = c_neq "action", "draw"
-vertex_new = ({stack, vertices})->
-  {position} = stack.peek()
-  last = vertices.last()
-  (not last?) or position[0] isnt last[0] or position[1] isnt last[1]
-
+  
 set = (prop, val)->(state)->state.set prop, val
 update = (prop, f)->(state)->state.update prop, f
 ite = (cond0, thenBranch, elseBranch=identity)->(state)->
@@ -82,15 +80,54 @@ move = (state)->
     .bind ite drawing, flush
     .bind update "accumulator", addDelta
     .bind updateTop "position", addDelta
+    .bind updateTop "vertex", -> null
     .bind set "action", "move"
     .unwrap
 
-draw = (state, _,{position})->
+# Is the current position that of a known vertex?
+knownPosition = ({stack})->
+  stack.peek().vertex?
+
+# is the current vertex recorded as the last vertex
+# of the most recent edge?
+continuation = ({edges, stack})->
+  v0 = edges.last()?.last()
+  v1 = stack.peek().vertex
+
+  v0? and v1? and v0 is v1
+
+
+
+startEdgeAtKnownVertex = (state)->
+  vertex = state.stack.peek().vertex
+  wrap state
+    .bind update "edges", (edge)->edge.push List [state.stack.peek().vertex]
+    .unwrap
+
+startEdgeAtNewVertex= (state,{vertices},{position})->
+  wrap state
+    .bind update "vertices", (vertices)->vertices.push position
+    .bind updateTop "vertex", -> vertices.size
+    .bind update "edges", (edges)->edges.push List [vertices.size]
+    .unwrap
+
+startEdge = (state,{vertices},{position})->
+  wrap state
+    .bind ite knownPosition, startEdgeAtKnownVertex, startEdgeAtNewVertex
+    .unwrap
+
+continueEdge = (to)->(state,{vertices})->
+  wrap state
+    .bind update "vertices", (vertices)->vertices.push to
+    .bind updateTop "vertex", -> vertices.size
+    .bind update "edges", (edges)->edges.pop().push edges.last().push vertices.size
+    .unwrap
+draw = (state, {vertices},{position})->
   addDelta = v_add delta state
   wrap state
     .bind ite not_drawing, flush
-    .bind ite vertex_new, update "vertices", (vertices)->vertices.push position
-    .bind update "vertices", (vertices)->vertices.push addDelta position
+    .bind ite continuation, identity, startEdge
+    .bind continueEdge addDelta position
     .bind update "accumulator", addDelta
     .bind updateTop "position", addDelta
     .bind set "action", "draw"
@@ -145,7 +182,9 @@ module.exports = class Turtle
   distance: next (d)-> updateTop "distance", ->d
   turnAngle: next (a)-> updateTop "turnAngle", ->a
   exec: next execute
-  points: ()->@state.vertices.toJS()
+  vertices: ()->@state.vertices.toJS()
+  edges: ()->@state.edges.toJS()
+  points: ()->@vertices()
   path: ()->
     p= wrap @state
       .bind flush

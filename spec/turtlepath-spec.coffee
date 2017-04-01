@@ -56,14 +56,36 @@ describe "The simple turtle", ->
       .path()
     expect(path).to.eql "M 0 0 l 0 -1 l -1 #{-e} l 0 -1 M -1 -1 l #{-f} 1 M -1 -1 M 0 -1"
 
-  it "can produce a list of vertices instead of a path", ->
-    points = new Turtle()
-      .exec "fFF++F-F"
-      .points()
-    expect(points).to.eql [
+  it "can produce a list of vertices and edges instead of a path", ->
+    t= new Turtle()
+      .exec "fFF++f-F"
+    
+    expect(t.vertices()).to.eql [
       [0,-1]
       [0,-2]
       [0,-3]
       [f,-2]
       [1.0000000000000002,-2]
+    ]
+
+    expect(t.edges()).to.eql [
+      [0,1,2]
+      [3,4]
+    ]
+
+  it "tries to reuse vertices in obvious cases (push/pop)", ->
+    t= new Turtle().exec "fF[F][+F]-f+F"
+
+    expect(t.vertices()).to.eql [
+      [0,-1]
+      [0,-2]
+      [0,-3]
+      [1,-2]
+      [-1,-2]
+      [-1,-3]
+    ]
+    expect(t.edges()).to.eql [
+      [0,1,2]
+      [1,3]
+      [4,5]
     ]
