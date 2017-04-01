@@ -1,6 +1,6 @@
 {
   "name": "turtlepath",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "create svg path using turtle graphics",
   "main": "lib/index.js",
   "scripts": {
