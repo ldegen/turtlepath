@@ -4,7 +4,9 @@
   "description": "create svg path using turtle graphics",
   "main": "lib/index.js",
   "scripts": {
-    "prepublish": "mkdir -p lib && coffee -o lib/ -c src/*",
+    "prepublish": "npm run compile-coffee && npm run copy-javascript",
+    "compile-coffee": "mkdir -p lib && coffee -o lib/ -c src/*.coffee",
+    "copy-javascript": "mkdir -p lib && cp src/*.js lib",
     "test": "mocha spec --recursive --require spec/helpers/chai.js --require coffee-script/register --compilers coffee:coffee-script/register",
     "test-watch": "mocha --recursive -b -w spec --require spec/helpers/chai.js --require coffee-script/register --compilers coffee:coffee-script/register,litcoffee:coffee-script/register ",
     "test-debug": "node-debug node_modules/mocha/bin/_mocha  --recursive spec --require spec/helpers/chai.js --require coffee-script/register --compilers coffee:coffee-script/register --no-timeouts --debug-brk"
@@ -23,6 +25,8 @@
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "coffee-script": "^1.12.4",
+    "coffeelint": "^1.16.0",
+    "eslint": "^4.0.0",
     "mocha": "^3.2.0"
   },
   "dependencies": {
