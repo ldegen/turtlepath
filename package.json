@@ -23,6 +23,7 @@
   "homepage": "https://github.com/ldegen/turtlepath#readme",
   "devDependencies": {
     "chai": "^3.5.0",
+    "chai-almost": "^1.0.1",
     "chai-as-promised": "^6.0.0",
     "coffee-script": "^1.12.4",
     "coffeelint": "^1.16.0",
